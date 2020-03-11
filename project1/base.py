@@ -1,14 +1,30 @@
-import codecs, re, time, lxml
+import codecs
+import math
+import os
+import re
+import time
+
 from bs4 import BeautifulSoup
 
 if __name__ == '__main__':
 
-    startTime = time.time()
     totalFiles = []
     frequencyTokens = {}
+    allTermFrequency = {}
     totalCases = 0
+    totalDocuments = input("Enter the under of documents to be weighed: ")
+    totalDocuments = int(totalDocuments) + 1
+
+    startTime = time.time()
+
+    # gets all the stop words
+    stopFile = open('stoplist.txt', 'r')
+    stops = stopFile.readlines()
+    stopwords = [x.strip() for x in stops]
+    stopwords = set(stopwords)
+
     # iterate through the local html files
-    for num in range(1, 503):
+    for num in range(1, totalDocuments):
         stringNum = str(num)
         if 100 > num > 9:
             stringNum = "0" + stringNum
@@ -25,7 +41,7 @@ if __name__ == '__main__':
         results = results.lower()
         results = re.sub('\W+', ' ', results)
         allWords = results.split(" ")
-        localfileDictionary = {}
+        localFrequencyTokens = {}
 
         specialCheck = re.compile('[@_\[\]#$%^&*()<>/\}{~1234567890-]')
 
@@ -35,45 +51,66 @@ if __name__ == '__main__':
                 # Do nothing
                 pass
             # increase to local dictionary if new key or create a new one if it's new, same with the larger dictionary
-            elif word in localfileDictionary:
-                localfileDictionary[word] = localfileDictionary[word] + 1
+            elif word in localFrequencyTokens:
+                localFrequencyTokens[word] = localFrequencyTokens[word] + 1
                 if word in frequencyTokens:
                     frequencyTokens[word] = frequencyTokens[word] + 1
                 else:
                     frequencyTokens[word] = 1
             else:
-                localfileDictionary[word] = 1
+                localFrequencyTokens[word] = 1
                 if word in frequencyTokens:
                     frequencyTokens[word] = frequencyTokens[word] + 1
                 else:
                     frequencyTokens[word] = 1
-        totalFiles.append(localfileDictionary)
+
+        # remove stopwords in frequencyToken dictionary
+        for stopword in stopwords:
+            if stopword in frequencyTokens:
+                localFrequencyTokens.pop(stopword)
+                frequencyTokens.pop(stopword)
+
+        # removes '' words
+        if '' in localFrequencyTokens:
+            localFrequencyTokens.pop('')
+
+        # calculate the term frequency of every word in the file and save to a dictionary
+        fileSize = len(localFrequencyTokens)
+        termFreq = {}
+
+        for word, count in localFrequencyTokens.items():
+            termFreq[word] = count / float(fileSize)
+
+        # dictionary for all termFrequency of all the files
+        allTermFrequency[num] = termFreq
+
+        # unused
+        totalFiles.append(localFrequencyTokens)
+
     # removes '' words
     if '' in frequencyTokens:
         frequencyTokens.pop('')
 
-    # create the file of all the tokens sorted by their frequency
-    frequencyFile = open("ByFrequencyHW1.txt", "w",  encoding='utf-8', errors='ignore')
-    for token in sorted(frequencyTokens.items(), reverse=True, key=lambda x: x[1]):
-            frequencyFile.write(str(token[0]) + ": " + str(token[1]) + "\n")
-    frequencyFile.close()
+    # calculate the inverse frequency
+    inverseDocumentFreq = {}
 
-    # create the file of all the tokens sorted alphabetically
-    alphabeticalFile = open("ByTokenHW1.txt", "w", encoding='utf-8', errors='ignore')
-    for token in sorted(frequencyTokens.keys()):
-        alphabeticalFile.write(token + ": " + str(frequencyTokens.get(token)) + "\n")
-    alphabeticalFile.close()
+    for word, val in frequencyTokens.items():
+        inverseDocumentFreq[word] = math.log(totalDocuments / float(val))
 
-    # create the file of all the tokens in each html file
-    filesFile = open("TokenDocsHW1.txt", "w", encoding='utf-8', errors='ignore')
-    fileNum = 1
-    for files in totalFiles:
-        filesFile.write('File Number:' + str(fileNum) + '\n')
-        for token in files:
-            filesFile.write(token + ", ")
-        filesFile.write('\n----------\n')
-        fileNum = fileNum + 1
-    filesFile.close()
+    # for each file, calculate the weight of each word by tf-idf and write to a file
+    for num in range(1, totalDocuments):
+        stringNum = str(num)
+        if 100 > num > 9:
+            stringNum = "0" + stringNum
+        elif num < 10:
+            stringNum = "00" + stringNum
+
+        filePath = 'C:/Users/Tony/PyCharmProjects/476/project1/proj2/' + stringNum + ".wts"
+        file = open(filePath, 'w', encoding='utf-8', errors='ignore')
+        termFreq = allTermFrequency[num]
+        for word, val in termFreq.items():
+            file.write('weight of ' + word + ': ' + str(val * inverseDocumentFreq[word]) + '\n')
+        file.close()
 
     endTime = time.time()
     seconds = endTime - startTime
