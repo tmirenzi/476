@@ -1,6 +1,5 @@
 import codecs
 import math
-import os
 import re
 import time
 
@@ -97,20 +96,47 @@ if __name__ == '__main__':
     for word, val in frequencyTokens.items():
         inverseDocumentFreq[word] = math.log(totalDocuments / float(val))
 
-    # for each file, calculate the weight of each word by tf-idf and write to a file
-    for num in range(1, totalDocuments):
-        stringNum = str(num)
-        if 100 > num > 9:
-            stringNum = "0" + stringNum
-        elif num < 10:
-            stringNum = "00" + stringNum
+    # term dictionary that has the length of the the list of document-weight pairs of a term
+    termSizePair = {}
+    # Create postings file
+    filePath = 'C:/Users/Tony/PyCharmProjects/476/project1/proj3/postings.txt'
+    file = open(filePath, 'w', encoding='utf-8', errors='ignore')
 
-        filePath = 'C:/Users/Tony/PyCharmProjects/476/project1/proj2/' + stringNum + ".wts"
-        file = open(filePath, 'w', encoding='utf-8', errors='ignore')
-        termFreq = allTermFrequency[num]
-        for word, val in termFreq.items():
-            file.write('weight of ' + word + ': ' + str(val * inverseDocumentFreq[word]) + '\n')
-        file.close()
+    # TODO: optional sort by alphabet
+    for word in frequencyTokens:
+        termDocWeightPair = []
+        set(termDocWeightPair)
+        for num in range(1, totalDocuments):
+            stringNum = str(num)
+            if 100 > num > 9:
+                stringNum = "0" + stringNum
+            elif num < 10:
+                stringNum = "00" + stringNum
+            termFreq = allTermFrequency[num]
+
+            # if the word exists in the current document, save doc, word weight pair
+            if word in termFreq:
+                # for each term in a file, calculate the weight of each word by tf-idf and save to a vector
+                docWeightPair = str(num) + ", " + str(termFreq[word] * inverseDocumentFreq[word])
+                termDocWeightPair.append(docWeightPair)
+        termSizePair[word] = termDocWeightPair
+        # writing the pair to the postings text file
+        # file.write(str(word) + ': \n')
+        for pair in termDocWeightPair:
+            file.write(str(pair) + '\n')
+
+    file.close()
+
+    filePath = 'C:/Users/Tony/PyCharmProjects/476/project1/proj3/dictionaryRecord.txt'
+    file = open(filePath, 'w', encoding='utf-8', errors='ignore')
+    wordPosition = 1
+    for word in termSizePair:
+        file.write(word + '\n')
+        length = termSizePair[word]
+        file.write(str(len(length)) + '\n')
+        file.write(str(wordPosition) + '\n')
+        wordPosition = len(length) + wordPosition
+    file.close()
 
     endTime = time.time()
     seconds = endTime - startTime
